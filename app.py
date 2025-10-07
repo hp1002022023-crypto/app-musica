@@ -1,5 +1,7 @@
 import streamlit as st
+import requests
 
+# ---------------------- Estilos ----------------------
 st.markdown(
     """
     <style>
@@ -58,64 +60,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-musica_por_estado = {
-    "feliz": [
-        {"titulo": "Happy", "artista": "Pharrell Williams", "url": "https://www.youtube.com/watch?v=ZbZSe6N_BXs"},
-        {"titulo": "Walking on Sunshine", "artista": "Katrina & The Waves", "url": "https://www.youtube.com/watch?v=iPUmE-tne5U"},
-    ],
-    "triste": [
-        {"titulo": "Someone Like You", "artista": "Adele", "url": "https://www.youtube.com/watch?v=hLQl3WQQoQ0"},
-        {"titulo": "Fix You", "artista": "Coldplay", "url": "https://www.youtube.com/watch?v=k4V3Mo61fJM"},
-    ],
-    "enamorado": [
-        {"titulo": "Perfect", "artista": "Ed Sheeran", "url": "https://www.youtube.com/watch?v=2Vv-BfVoq4g"},
-        {"titulo": "All of Me", "artista": "John Legend", "url": "https://www.youtube.com/watch?v=450p7goxZqg"},
-    ],
-    "estresado": [
-        {"titulo": "Weightless", "artista": "Marconi Union", "url": "https://www.youtube.com/watch?v=UfcAVejslrU"},
-        {"titulo": "Clair de Lune", "artista": "Debussy", "url": "https://www.youtube.com/watch?v=CvFH_6DNRCY"},
-    ],
-    "motivado": [
-        {"titulo": "Eye of the Tiger", "artista": "Survivor", "url": "https://www.youtube.com/watch?v=btPJPFnesV4"},
-        {"titulo": "Stronger", "artista": "Kanye West", "url": "https://www.youtube.com/watch?v=PsO6ZnUZI0g"},
-    ],
-    "aburrido": [
-        {"titulo": "Uptown Funk", "artista": "Mark Ronson ft. Bruno Mars", "url": "https://www.youtube.com/watch?v=OPf0YbXqDm0"},
-        {"titulo": "Can't Stop the Feeling!", "artista": "Justin Timberlake", "url": "https://www.youtube.com/watch?v=ru0K8uYEZWw"},
-    ],
-    "nostalgico": [
-        {"titulo": "Yesterday", "artista": "The Beatles", "url": "https://www.youtube.com/watch?v=NrgmdOz227I"},
-        {"titulo": "Summer of '69", "artista": "Bryan Adams", "url": "https://www.youtube.com/watch?v=eFjjO_lhf9c"},
-    ],
-    "enojado": [
-        {"titulo": "Break Stuff", "artista": "Limp Bizkit", "url": "https://www.youtube.com/watch?v=ZpUYjpKg9KY"},
-        {"titulo": "Killing In The Name", "artista": "Rage Against The Machine", "url": "https://www.youtube.com/watch?v=bWXazVhlyxQ"},
-    ],
-    "relajado": [
-        {"titulo": "Sunset Lover", "artista": "Petit Biscuit", "url": "https://www.youtube.com/watch?v=Hv4cG5Z6CTY"},
-        {"titulo": "Weightless", "artista": "Marconi Union", "url": "https://www.youtube.com/watch?v=UfcAVejslrU"},
-    ],
-    "agradecido": [
-        {"titulo": "Thank You", "artista": "Dido", "url": "https://www.youtube.com/watch?v=YFQuuYg7U1Y"},
-        {"titulo": "Count on Me", "artista": "Bruno Mars", "url": "https://www.youtube.com/watch?v=yJYXItns2ik"},
-    ],
-    "melancolico": [
-        {"titulo": "The Night We Met", "artista": "Lord Huron", "url": "https://www.youtube.com/watch?v=KtlgYxa6BMU"},
-        {"titulo": "Lost Cause", "artista": "Billie Eilish", "url": "https://www.youtube.com/watch?v=AGD_q1PGE-Q"},
-    ],
-    "sorprendido": [
-        {"titulo": "Viva La Vida", "artista": "Coldplay", "url": "https://www.youtube.com/watch?v=dvgZkm1xWPE"},
-        {"titulo": "Happy Now", "artista": "Kygo", "url": "https://www.youtube.com/watch?v=dGghkjpNCQ8"},
-    ],
-    "divertido": [
-        {"titulo": "Can't Stop Me Now", "artista": "Queen", "url": "https://www.youtube.com/watch?v=HgzGwKwLmgM"},
-        {"titulo": "I Gotta Feeling", "artista": "Black Eyed Peas", "url": "https://www.youtube.com/watch?v=uSD4vsh1zDA"},
-    ],
-    "concentrado": [
-        {"titulo": "Time", "artista": "Hans Zimmer", "url": "https://www.youtube.com/watch?v=RxabLA7UQ9k"},
-        {"titulo": "Clocks", "artista": "Coldplay", "url": "https://www.youtube.com/watch?v=d020hcWA_Wg"},
-    ],
-}
+# ---------------------- Configuración ----------------------
+YOUTUBE_API_KEY = "AIzaSyD_at-QNQ2WUGM0hKbcynogJqhc3E_jtvQ"  # <-- Coloca aquí tu API Key
 
 emojis = {
     "feliz": "😄",
@@ -158,7 +104,33 @@ if 'favoritos' not in st.session_state:
 if 'contador' not in st.session_state:
     st.session_state['contador'] = {}
 
-# Título
+if 'estado_activo' not in st.session_state:
+    st.session_state['estado_activo'] = None
+
+# ---------------------- Función para buscar canciones ----------------------
+def buscar_canciones_youtube(estado, max_results=5):
+    busqueda_map = {
+        "feliz": "happy music", "triste": "sad music", "estresado": "relax music",
+        "motivado": "motivational music", "enamorado": "love songs",
+        "aburrido": "fun music", "nostalgico": "nostalgic songs", "enojado": "angry music",
+        "relajado": "chill music", "agradecido": "thankful music", "melancolico": "melancholic music",
+        "sorprendido": "surprise music", "divertido": "funny music", "concentrado": "focus music",
+    }
+    query = busqueda_map.get(estado, "music")
+    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults={max_results}&q={query}&type=video&key={YOUTUBE_API_KEY}"
+    response = requests.get(url)
+    canciones = []
+    if response.status_code == 200:
+        data = response.json()
+        for item in data['items']:
+            canciones.append({
+                "titulo": item['snippet']['title'],
+                "artista": item['snippet']['channelTitle'],
+                "url": f"https://www.youtube.com/watch?v={item['id']['videoId']}"
+            })
+    return canciones
+
+# ---------------------- Interfaz ----------------------
 st.title("Música según tu estado sentimental")
 st.write("Haz clic en tu sentimiento actual:")
 
@@ -166,16 +138,11 @@ st.write("Haz clic en tu sentimiento actual:")
 col1, col2, col3 = st.columns(3)
 columnas = [col1, col2, col3]
 
-# Inicializamos la variable si no existe
-if 'estado_activo' not in st.session_state:
-    st.session_state['estado_activo'] = None
+musica_por_estado = list(emojis.keys())  # solo para los botones
 
-# Lógica de botones
-for i, estado in enumerate(musica_por_estado.keys()):
+for i, estado in enumerate(musica_por_estado):
     col = columnas[i % 3]
-
     if col.button(estado.capitalize()):
-        # Si se vuelve a presionar el mismo botón, se oculta el contenido
         if st.session_state['estado_activo'] == estado:
             st.session_state['estado_activo'] = None
         else:
@@ -184,13 +151,12 @@ for i, estado in enumerate(musica_por_estado.keys()):
 # Mostrar contenido solo si hay un estado activo
 if st.session_state['estado_activo']:
     estado = st.session_state['estado_activo']
-    canciones = musica_por_estado[estado]
+    canciones = buscar_canciones_youtube(estado)
 
     st.subheader(f"{emojis[estado]} Canciones para cuando te sientes {estado}")
     st.markdown(f"<div class='tip-box'>{tips[estado]}</div>", unsafe_allow_html=True)
 
     for c in canciones:
-        # 🎥 Reproductor embebido
         st.markdown(f"**🎶 {c['titulo']}** - {c['artista']}")
         st.video(c["url"])
 

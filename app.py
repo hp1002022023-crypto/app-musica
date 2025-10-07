@@ -1,7 +1,7 @@
-import streamlit as st
+import streamlit as st 
 import requests
 
-# ---------------------- Estilos ----------------------
+# Estilos
 st.markdown(
     """
     <style>
@@ -60,8 +60,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------------- Configuración ----------------------
-YOUTUBE_API_KEY = "AIzaSyD_at-QNQ2WUGM0hKbcynogJqhc3E_jtvQ"  # <-- Coloca aquí tu API Key
+YOUTUBE_API_KEY = "AIzaSyD_at-QNQ2WUGM0hKbcynogJqhc3E_jtvQ"
 
 emojis = {
     "feliz": "😄",
@@ -107,7 +106,13 @@ if 'contador' not in st.session_state:
 if 'estado_activo' not in st.session_state:
     st.session_state['estado_activo'] = None
 
-# ---------------------- Función para buscar canciones ----------------------
+if 'canciones_actuales' not in st.session_state:
+    st.session_state['canciones_actuales'] = []
+
+if 'canciones_anteriores' not in st.session_state:
+    st.session_state['canciones_anteriores'] = []
+
+# Función para buscar canciones
 def buscar_canciones_youtube(estado, max_results=5):
     busqueda_map = {
         "feliz": "happy music", "triste": "sad music", "estresado": "relax music",
@@ -130,15 +135,15 @@ def buscar_canciones_youtube(estado, max_results=5):
             })
     return canciones
 
-# ---------------------- Interfaz ----------------------
+# Interfaz
 st.title("Música según tu estado sentimental")
 st.write("Haz clic en tu sentimiento actual:")
 
-# Botones en columnas
+# Botones de sentimientos en columnas
 col1, col2, col3 = st.columns(3)
 columnas = [col1, col2, col3]
 
-musica_por_estado = list(emojis.keys())  # solo para los botones
+musica_por_estado = list(emojis.keys())
 
 for i, estado in enumerate(musica_por_estado):
     col = columnas[i % 3]
@@ -147,16 +152,30 @@ for i, estado in enumerate(musica_por_estado):
             st.session_state['estado_activo'] = None
         else:
             st.session_state['estado_activo'] = estado
+            # Guardamos las actuales en vacías y buscamos primeras canciones
+            st.session_state['canciones_anteriores'] = []
+            st.session_state['canciones_actuales'] = buscar_canciones_youtube(estado)
 
 # Mostrar contenido solo si hay un estado activo
 if st.session_state['estado_activo']:
     estado = st.session_state['estado_activo']
-    canciones = buscar_canciones_youtube(estado)
-
     st.subheader(f"{emojis[estado]} Canciones para cuando te sientes {estado}")
     st.markdown(f"<div class='tip-box'>{tips[estado]}</div>", unsafe_allow_html=True)
 
-    for c in canciones:
+    # Botones de actualizar y volver
+    col_actualizar, col_volver = st.columns(2)
+    if col_actualizar.button("🔄 Actualizar canciones"):
+        st.session_state['canciones_anteriores'] = st.session_state['canciones_actuales']
+        st.session_state['canciones_actuales'] = buscar_canciones_youtube(estado)
+
+    if col_volver.button("⏮ Volver a sugerencias anteriores"):
+        if st.session_state['canciones_anteriores']:
+            st.session_state['canciones_actuales'], st.session_state['canciones_anteriores'] = (
+                st.session_state['canciones_anteriores'], st.session_state['canciones_actuales']
+            )
+
+    # Mostrar canciones actuales
+    for c in st.session_state['canciones_actuales']:
         st.markdown(f"**🎶 {c['titulo']}** - {c['artista']}")
         st.video(c["url"])
 
